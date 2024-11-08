@@ -24,7 +24,7 @@ npm install
 
 ### Environment Variables
 
-Create a `.env` file in the root directory of the project and add the following environment variables:
+Create a `.env.local` file in the root directory of the project and add the following environment variables:
 
 ```env
 DOKUWIKI_URL=<your_dokuwiki_url>
