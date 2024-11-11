@@ -12,6 +12,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@googleapis/docs": "^3.3.0",
     "@googleapis/drive": "^8.14.0",
     "ts-node": "^10.9.2"
   }

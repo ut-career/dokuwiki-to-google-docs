@@ -1,5 +1,5 @@
 import { login, fetchPages } from "./dokuwiki";
-import { convertToGoogleDocs, uploadToGoogleDrive } from "./googleDocs";
+import { createDoc } from "./googleDocs";
 
 const DOKUWIKI_URL = process.env.DOKUWIKI_URL || "";
 const DOKUWIKI_ID = process.env.DOKUWIKI_ID || "";
@@ -14,11 +14,9 @@ async function main() {
 			DOKUWIKI_PASSWORD,
 		);
 		const pages = await fetchPages(DOKUWIKI_URL, cookie);
-		console.log(pages.filter((p) => p.id.startsWith("wiki:")));
-		// for (const page of pages) {
-		// 	const googleDoc = await convertToGoogleDocs(page);
-		// 	await uploadToGoogleDrive(googleDoc, GOOGLE_DRIVE_FOLDER_ID);
-		// }
+		for (const page of pages.filter((p) => p.id.startsWith("wiki:menu"))) {
+			await createDoc(GOOGLE_DRIVE_FOLDER_ID, page.id);
+		}
 		console.log(
 			"DokuWiki pages have been successfully converted and uploaded to Google Drive.",
 		);
