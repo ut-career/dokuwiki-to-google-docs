@@ -1,0 +1,19 @@
+{
+  "name": "dokuwiki-to-google-docs",
+  "version": "1.0.0",
+  "description": "## Setup and Usage",
+  "scripts": {
+    "start": "node -r ts-node/register --env-file=.env.local ./src/index.ts"
+  },
+  "author": "adachi@hitocolor.co.jp",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@googleapis/docs": "^3.3.0",
+    "@googleapis/drive": "^8.14.0",
+    "ts-node": "^10.9.2"
+  }
+}
