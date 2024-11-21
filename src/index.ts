@@ -1,5 +1,5 @@
-import { login, fetchPages } from "./dokuwiki";
-import { createDoc } from "./googleDocs";
+import { login, fetchPages } from "./infra/dokuwiki";
+import { createDoc } from "./infra/googleDocs";
 
 const DOKUWIKI_URL = process.env.DOKUWIKI_URL || "";
 const DOKUWIKI_ID = process.env.DOKUWIKI_ID || "";
