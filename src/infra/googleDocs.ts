@@ -17,5 +17,6 @@ export const createDoc = async (folderId: string, title: string) => {
 		// 共有ドライブにアクセスするために必要
 		supportsAllDrives: true,
 	});
-	console.log("File Id:", file.data.id);
+
+	return file.data.id;
 };
