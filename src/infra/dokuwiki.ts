@@ -1,4 +1,6 @@
 // @see https://www.dokuwiki.org/plugin:jsonrpc
+import { Readable } from "node:stream";
+import type * as streamWeb from "node:stream/web";
 
 /**
  * login はDokuWikiにログインし、Cookieを返します。
@@ -73,27 +75,59 @@ export const fetchPageByName = async (
 	cookie: string,
 	pageName: string,
 ): Promise<string> => {
-	try {
-		const response = await fetch(
-			`${url}/wiki/lib/plugins/jsonrpc/jsonrpc.php`,
-			{
-				method: "POST",
-				headers: {
-					Cookie: cookie,
-				},
-				body: JSON.stringify({
-					method: { methodName: "wiki.getPage" },
-					params: [{ string: pageName }],
-					id: "",
-					jsonrpc: "2.0",
-				}),
-			},
-		);
+	const response = await fetch(`${url}/wiki/lib/plugins/jsonrpc/jsonrpc.php`, {
+		method: "POST",
+		headers: {
+			Cookie: cookie,
+		},
+		body: JSON.stringify({
+			method: { methodName: "wiki.getPage" },
+			params: [{ string: pageName }],
+			id: "",
+			jsonrpc: "2.0",
+		}),
+	});
 
-		const page = await response.json(); // Assuming the response data contains the pages in JSON format
-		return page.result;
-	} catch (error) {
-		console.error("Error fetching DokuWiki pages:", error);
-		throw error;
+	const page = await response.json();
+	return page.result;
+};
+
+export const fetchMediaIdList = async (
+	url: string,
+	cookie: string,
+): Promise<Array<{ id: string }>> => {
+	const response = await fetch(`${url}/wiki/lib/plugins/jsonrpc/jsonrpc.php`, {
+		method: "POST",
+		headers: {
+			Cookie: cookie,
+		},
+		body: JSON.stringify({
+			method: { methodName: "wiki.getAttachments" },
+			params: [{ string: "" }],
+			id: "",
+			jsonrpc: "2.0",
+		}),
+	});
+
+	const page = await response.json();
+	return page.result;
+};
+
+export const fetchMediaStream = async (
+	url: string,
+	cookie: string,
+	mediaId: string,
+): Promise<NodeJS.ReadableStream> => {
+	const response = await fetch(
+		`${url}/wiki/lib/exe/fetch.php?media=${mediaId}`,
+		{
+			headers: {
+				Cookie: cookie,
+			},
+		},
+	);
+	if (response.body === null) {
+		throw new Error(`Failed to fetch ${mediaId}`);
 	}
+	return Readable.fromWeb(response.body as streamWeb.ReadableStream);
 };
