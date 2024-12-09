@@ -12,6 +12,11 @@ type CreateDocsParameters = {
 	outputJsonFilePath: string;
 };
 
+/**
+ * すべてのページをGoogle DocumentとしてDoogle Driveにアップロードします。
+ *
+ * output: ページとGoogle DocumentのIDのマップがoutputJsonFilePathに保存されます。
+ */
 export const createDocs = async ({
 	googleDriveFolderId,
 	wikiFilesDirPath,
