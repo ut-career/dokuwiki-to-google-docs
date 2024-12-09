@@ -1,4 +1,5 @@
 import { drive, auth } from "@googleapis/drive";
+import { docs } from "@googleapis/docs";
 
 export const createDoc = async (folderId: string, title: string) => {
 	const googleAuth = new auth.GoogleAuth({
@@ -19,6 +20,89 @@ export const createDoc = async (folderId: string, title: string) => {
 	});
 
 	return file.data.id;
+};
+
+export const writeDoc = async (docId: string, content: string) => {
+	if (!content) {
+		throw new Error("content is empty");
+	}
+
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					insertText: {
+						text: content,
+						endOfSegmentLocation: {
+							segmentId: "",
+						},
+					},
+				},
+			],
+		},
+	});
+};
+
+export const updateLink = async (
+	docId: string,
+	originalText: string,
+	url: string,
+	title: string,
+	startIndex: number,
+	endIndex: number,
+) => {
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					updateTextStyle: {
+						textStyle: {
+							link: {
+								url,
+							},
+							underline: true,
+							foregroundColor: {
+								color: {
+									rgbColor: {
+										red: 0.07,
+										green: 0.33,
+										blue: 0.8,
+									},
+								},
+							},
+						},
+						fields: "*",
+						range: {
+							startIndex,
+							endIndex,
+						},
+					},
+				},
+				{
+					replaceAllText: {
+						containsText: {
+							text: originalText,
+						},
+						replaceText: title,
+					},
+				},
+			],
+		},
+	});
 };
 
 export const uploadFile = async ({

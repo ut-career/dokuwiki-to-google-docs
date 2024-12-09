@@ -2,6 +2,7 @@ import { login } from "./infra/dokuwiki";
 import { wikiToLocal } from "./service/wiki-to-local";
 import { createDocs } from "./service/create-docs";
 import { uploadMedia } from "./service/upload-media";
+import { writeDocs } from "./service/write-docs";
 
 const DOKUWIKI_URL = process.env.DOKUWIKI_URL || "";
 const DOKUWIKI_ID = process.env.DOKUWIKI_ID || "";
@@ -44,6 +45,12 @@ const main = async () => {
 		dokuwikiUrl: DOKUWIKI_URL,
 		googleDriveFolderId: GOOGLE_DRIVE_FOLDER_ID,
 		outputJsonFilePath: OUTPUT_MEDIA_ID_MAP_JSON,
+	});
+
+	console.info("Writing DokuWiki pages to Google Docs...");
+	await writeDocs({
+		docIdMapJsonPath: OUTPUT_DOC_ID_MAP_JSON,
+		dokuwikiPagesDirPath: OUTPUT_DOKUWIKI_DIR,
 	});
 };
 

@@ -9,3 +9,7 @@ export const createFile = async (filePath: string, content: string) => {
 	await fs.promises.mkdir(dir, { recursive: true });
 	await fs.promises.writeFile(filePath, content);
 };
+
+export const readFile = async (filePath: string) => {
+	return fs.promises.readFile(filePath, { encoding: "utf-8" });
+};
