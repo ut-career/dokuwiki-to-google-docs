@@ -56,6 +56,79 @@ export const updateLink = async (
 	url: string,
 	title: string,
 	startIndex: number,
+) => {
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	const endIndex = startIndex + originalText.length;
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					// 同名のリンクがある場合に不具合になるので、NamedRangeを使って対応
+					createNamedRange: {
+						name: `${startIndex}-${endIndex}`,
+						range: {
+							startIndex,
+							endIndex,
+						},
+					},
+				},
+				{
+					// リンクを設定してからテキストを置換するとリンクが消えるので、先にテキストを置換する
+					replaceNamedRangeContent: {
+						namedRangeName: `${startIndex}-${endIndex}`,
+						text: title,
+					},
+				},
+				{
+					updateTextStyle: {
+						textStyle: {
+							link: {
+								url,
+							},
+							underline: true,
+							foregroundColor: {
+								color: {
+									rgbColor: {
+										red: 0.06666667,
+										green: 0.33333334,
+										blue: 0.8,
+									},
+								},
+							},
+						},
+						fields: "*",
+						range: {
+							// listの場合listの記号にも色がついてしまうので、前後にスペースを追加することでリンクのみに色がつくようにする
+							// write-docsと蜜結合でいやだな、、、
+							startIndex: startIndex + 1,
+							endIndex: endIndex - (originalText.length - title.length) - 1,
+						},
+					},
+				},
+			],
+		},
+	});
+};
+
+export const updateHeading = async (
+	docId: string,
+	originalText: string,
+	headingStyle:
+		| "HEADING_1"
+		| "HEADING_2"
+		| "HEADING_3"
+		| "HEADING_4"
+		| "HEADING_5"
+		| "HEADING_6",
+	text: string,
+	startIndex: number,
 	endIndex: number,
 ) => {
 	const googleAuth = new auth.GoogleAuth({
@@ -69,21 +142,9 @@ export const updateLink = async (
 		requestBody: {
 			requests: [
 				{
-					updateTextStyle: {
-						textStyle: {
-							link: {
-								url,
-							},
-							underline: true,
-							foregroundColor: {
-								color: {
-									rgbColor: {
-										red: 0.07,
-										green: 0.33,
-										blue: 0.8,
-									},
-								},
-							},
+					updateParagraphStyle: {
+						paragraphStyle: {
+							namedStyleType: headingStyle,
 						},
 						fields: "*",
 						range: {
@@ -97,7 +158,157 @@ export const updateLink = async (
 						containsText: {
 							text: originalText,
 						},
-						replaceText: title,
+						replaceText: text,
+					},
+				},
+			],
+		},
+	});
+};
+
+export const replaceText = async (
+	docId: string,
+	originalText: string,
+	text: string,
+) => {
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					replaceAllText: {
+						containsText: {
+							text: originalText,
+						},
+						replaceText: text,
+					},
+				},
+			],
+		},
+	});
+};
+
+export const updateUnorderListItem = async (
+	docId: string,
+	originalText: string,
+	text: string,
+	indentLevel: number,
+	startIndex: number,
+	endIndex: number,
+) => {
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					createParagraphBullets: {
+						range: {
+							startIndex,
+							endIndex,
+						},
+						bulletPreset: "BULLET_DISC_CIRCLE_SQUARE",
+					},
+				},
+				{
+					updateParagraphStyle: {
+						range: {
+							startIndex,
+							endIndex,
+						},
+						paragraphStyle: {
+							// Google Docsのデフォルトのインデント量に従う
+							indentFirstLine: {
+								magnitude: (indentLevel - 1) * 36 + 18,
+								unit: "PT",
+							},
+							indentStart: {
+								magnitude: indentLevel * 36,
+								unit: "PT",
+							},
+						},
+						// * だと namedStyleType を含んでしまい、エラーになる
+						fields: "indentFirstLine,indentStart",
+					},
+				},
+				{
+					replaceAllText: {
+						containsText: {
+							text: originalText,
+						},
+						replaceText: text,
+					},
+				},
+			],
+		},
+	});
+};
+
+export const updateOrderedListItem = async (
+	docId: string,
+	originalText: string,
+	text: string,
+	indentLevel: number,
+	startIndex: number,
+	endIndex: number,
+) => {
+	const googleAuth = new auth.GoogleAuth({
+		scopes: ["https://www.googleapis.com/auth/drive"],
+	});
+
+	const googleDocs = docs({ version: "v1", auth: googleAuth });
+
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					createParagraphBullets: {
+						range: {
+							startIndex,
+							endIndex,
+						},
+						bulletPreset: "NUMBERED_DECIMAL_ALPHA_ROMAN",
+					},
+				},
+				{
+					updateParagraphStyle: {
+						range: {
+							startIndex,
+							endIndex,
+						},
+						paragraphStyle: {
+							// Google Docsのデフォルトのインデント量に従う
+							indentFirstLine: {
+								magnitude: (indentLevel - 1) * 36 + 18,
+								unit: "PT",
+							},
+							indentStart: {
+								magnitude: indentLevel * 36,
+								unit: "PT",
+							},
+						},
+						// * だと namedStyleType を含んでしまい、エラーになる
+						fields: "indentFirstLine,indentStart",
+					},
+				},
+				{
+					replaceAllText: {
+						containsText: {
+							text: originalText,
+						},
+						replaceText: text,
 					},
 				},
 			],
