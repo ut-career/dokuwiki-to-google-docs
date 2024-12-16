@@ -1,13 +1,13 @@
 import { drive, auth } from "@googleapis/drive";
 import { docs } from "@googleapis/docs";
 
+const googleAuth = new auth.GoogleAuth({
+	scopes: ["https://www.googleapis.com/auth/drive"],
+});
+const googleDrive = drive({ version: "v3", auth: googleAuth });
+const googleDocs = docs({ version: "v1", auth: googleAuth });
+
 export const createDoc = async (folderId: string, title: string) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDrive = drive({ version: "v3", auth: googleAuth });
-
 	const file = await googleDrive.files.create({
 		requestBody: {
 			name: title,
@@ -19,6 +19,7 @@ export const createDoc = async (folderId: string, title: string) => {
 		supportsAllDrives: true,
 	});
 
+	await waitForQuota();
 	return file.data.id;
 };
 
@@ -26,12 +27,6 @@ export const writeDoc = async (docId: string, content: string) => {
 	if (!content) {
 		throw new Error("content is empty");
 	}
-
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
 
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
@@ -48,6 +43,7 @@ export const writeDoc = async (docId: string, content: string) => {
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const updateLink = async (
@@ -57,12 +53,6 @@ export const updateLink = async (
 	title: string,
 	startIndex: number,
 ) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
-
 	const endIndex = startIndex + originalText.length;
 
 	await googleDocs.documents.batchUpdate({
@@ -115,6 +105,7 @@ export const updateLink = async (
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const updateHeading = async (
@@ -131,12 +122,6 @@ export const updateHeading = async (
 	startIndex: number,
 	endIndex: number,
 ) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
-
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -164,6 +149,7 @@ export const updateHeading = async (
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const replaceText = async (
@@ -171,12 +157,6 @@ export const replaceText = async (
 	originalText: string,
 	text: string,
 ) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
-
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -192,6 +172,7 @@ export const replaceText = async (
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const updateUnorderListItem = async (
@@ -202,12 +183,6 @@ export const updateUnorderListItem = async (
 	startIndex: number,
 	endIndex: number,
 ) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
-
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -253,6 +228,7 @@ export const updateUnorderListItem = async (
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const updateOrderedListItem = async (
@@ -263,12 +239,6 @@ export const updateOrderedListItem = async (
 	startIndex: number,
 	endIndex: number,
 ) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDocs = docs({ version: "v1", auth: googleAuth });
-
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -314,6 +284,7 @@ export const updateOrderedListItem = async (
 			],
 		},
 	});
+	await waitForQuota();
 };
 
 export const uploadFile = async ({
@@ -327,12 +298,6 @@ export const uploadFile = async ({
 	mimeType: string;
 	body: NodeJS.ReadableStream;
 }) => {
-	const googleAuth = new auth.GoogleAuth({
-		scopes: ["https://www.googleapis.com/auth/drive"],
-	});
-
-	const googleDrive = drive({ version: "v3", auth: googleAuth });
-
 	const file = await googleDrive.files.create(
 		{
 			requestBody: {
@@ -353,6 +318,12 @@ export const uploadFile = async ({
 			},
 		},
 	);
+	await waitForQuota();
 
 	return file.data.id;
+};
+
+const waitForQuota = async () => {
+	// 60req/1min/1user なので、1req/1sec になるように待つ
+	await new Promise((resolve) => setTimeout(resolve, 1000));
 };
