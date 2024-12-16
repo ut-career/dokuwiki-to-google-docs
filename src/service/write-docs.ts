@@ -1,7 +1,7 @@
 import { stdout } from "node:process";
 import readline from "node:readline";
 import {
-	replaceText,
+	replaceDevider,
 	updateHeading,
 	updateLink,
 	updateOrderedListItem,
@@ -92,7 +92,7 @@ const writeGoogleDocsBody = async (
 		/==((?!==)[^\n]*)==/g,
 		"HEADING_6",
 	);
-	const googleDocsBodyWithoutDividers = await deleteDividers(
+	const googleDocsBodyWithoutDividers = await updateDividers(
 		googleDocsId,
 		heading6UpdatedGoogleDocsBody,
 	);
@@ -168,14 +168,33 @@ const updateHeadings = async (
 	return updatedResult;
 };
 
-const deleteDividers = async (
+const updateDividers = async (
 	googleDocsId: string,
 	googleDocsBody: string,
 ): Promise<string> => {
-	console.info("\t\tDeleting dividers...");
-	await replaceText(googleDocsId, "----\n", "");
-	console.info("\t\tDeleted dividers");
-	return googleDocsBody.replaceAll("----\n", "");
+	const rl = new readline.promises.Readline(stdout);
+	const dividers = googleDocsBody.matchAll(/----\n/g);
+	console.info("\t\tUpdating Dividers...");
+	console.info("\t\tUpdated 0 Dividers");
+	let count = 0;
+	let updatedResult = googleDocsBody;
+	for (const [match] of dividers) {
+		const { raplacedObjectLength } = await replaceDevider(
+			googleDocsId,
+			match,
+			updatedResult.indexOf(match),
+		);
+		updatedResult = updatedResult.replace(
+			match,
+			// - で置換すると↑のindexOfに引っかかるので、スペースで置換する
+			" ".repeat(raplacedObjectLength),
+		);
+		count++;
+		rl.moveCursor(0, -1);
+		await rl.commit();
+		console.info(`\t\tUpdated ${count} Dividers`);
+	}
+	return updatedResult;
 };
 
 const updateUnorderListItems = async (

@@ -287,6 +287,95 @@ export const updateOrderedListItem = async (
 	await waitForQuota();
 };
 
+export const replaceDevider = async (
+	docId: string,
+	originalText: string,
+	startIndex: number,
+) => {
+	const endIndex = startIndex + originalText.length;
+	const borderNoneStyle = {
+		width: {
+			magnitude: 0,
+			unit: "PT",
+		},
+		dashStyle: "SOLID",
+		color: {
+			color: {
+				rgbColor: {
+					red: 1,
+					green: 1,
+					blue: 1,
+				},
+			},
+		},
+	};
+	await googleDocs.documents.batchUpdate({
+		documentId: docId,
+		requestBody: {
+			requests: [
+				{
+					// replaceAllだと複数ある場合に不具合になるので、NamedRangeを使って対応
+					createNamedRange: {
+						name: `${startIndex}-${endIndex}`,
+						range: {
+							startIndex,
+							endIndex,
+						},
+					},
+				},
+				{
+					replaceNamedRangeContent: {
+						namedRangeName: `${startIndex}-${endIndex}`,
+						text: "",
+					},
+				},
+				// apiにはhorizontalRuleがないので、tableで代用
+				{
+					insertTable: {
+						rows: 1,
+						columns: 1,
+						location: {
+							index: startIndex,
+						},
+					},
+				},
+				{
+					updateTableCellStyle: {
+						tableStartLocation: {
+							index: startIndex + 1,
+						},
+						tableCellStyle: {
+							borderTop: borderNoneStyle,
+							borderLeft: borderNoneStyle,
+							borderRight: borderNoneStyle,
+						},
+						fields: "borderTop,borderLeft,borderRight",
+					},
+				},
+				{
+					updateTextStyle: {
+						range: {
+							startIndex: startIndex + 3,
+							endIndex: startIndex + 4,
+						},
+						textStyle: {
+							fontSize: {
+								magnitude: 1,
+								unit: "PT",
+							},
+						},
+						fields: "fontSize",
+					},
+				},
+			],
+		},
+	});
+	await waitForQuota();
+	return {
+		raplacedObjectLength: 6,
+	};
+};
+
 export const uploadFile = async ({
 	name,
 	parent,
