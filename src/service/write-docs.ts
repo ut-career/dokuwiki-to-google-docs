@@ -53,7 +53,8 @@ const writeGoogleDocsBody = async (
 				return dokuwikiLinkToMarkdownLink(args[1], args[2], idMap);
 			},
 		)
-		.replaceAll("\n\n\n", "\n");
+		.replaceAll("\n\n\n", "\n")
+		.replaceAll("\\\\", "");
 
 	await writeDoc(googleDocsId, googleDocsBody);
 	const heading1UpdatedGoogleDocsBody = await updateHeadings(
