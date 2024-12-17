@@ -12,12 +12,18 @@ import { readFile } from "../infra/local";
 
 export const writeDocs = async ({
 	docIdMapJsonPath,
+	mediaIdMapJsonPath,
 	dokuwikiPagesDirPath,
 }: {
 	docIdMapJsonPath: string;
+	mediaIdMapJsonPath: string;
 	dokuwikiPagesDirPath: string;
 }) => {
 	const idMap = JSON.parse(await readFile(docIdMapJsonPath)) as Record<
+		string,
+		string
+	>;
+	const mediaIdMap = JSON.parse(await readFile(mediaIdMapJsonPath)) as Record<
 		string,
 		string
 	>;
@@ -25,37 +31,40 @@ export const writeDocs = async ({
 	// 	const dokuwikiFilepath = `${dokuwikiPagesDirPath}/${dokuwikiPage}`;
 	// 	await writeGoogleDocsBody(idMap, dokuwikiFilepath, googleDocsId);
 	// }
-	// await writeGoogleDocsBody(
-	// 	idMap,
-	// 	`${dokuwikiPagesDirPath}/wiki_menu`,
-	// 	idMap.wiki_menu,
-	// );
+	await writeGoogleDocsBody(
+		idMap,
+		mediaIdMap,
+		`${dokuwikiPagesDirPath}/wiki_menu`,
+		idMap.wiki_menu,
+	);
 	// await writeGoogleDocsBody(
 	// 	idMap,
 	// 	`${dokuwikiPagesDirPath}/wiki_remote-desktop`,
 	// 	idMap["wiki_remote-desktop"],
 	// );
-	await writeGoogleDocsBody(
-		idMap,
-		`${dokuwikiPagesDirPath}/wiki_soft`,
-		idMap.wiki_soft,
-	);
+	// await writeGoogleDocsBody(
+	// 	idMap,
+	// 	mediaIdMap,
+	// 	`${dokuwikiPagesDirPath}/wiki_soft`,
+	// 	idMap.wiki_soft,
+	// );
 };
 
 const writeGoogleDocsBody = async (
 	idMap: Record<string, string>,
+	mediaIdMap: Record<string, string>,
 	dokuwikiFilepath: string,
 	googleDocsId: string,
 ) => {
 	console.info(`\tWriting ${dokuwikiFilepath} to ${googleDocsId}`);
 	const file = await readFile(dokuwikiFilepath);
 	const googleDocsBody = file
-		.replaceAll(
-			/\[\[(\[\[)?([^\|\]]*)[\|]?([^\]]*)\]\](\\\\)?/g,
-			(_, ...args) => {
-				return dokuwikiLinkToMarkdownLink(args[1], args[2], idMap);
-			},
-		)
+		.replaceAll(/\[\[(\[\[)?([^\|\]]*)[\|]?([^\]]*)\]\]/g, (_, ...args) => {
+			return dokuwikiLinkToMarkdownLink(args[1], args[2], idMap);
+		})
+		.replaceAll(/\{\{([^\|\]]*)[\|]?([^\}]*)\}\}/g, (_, ...args) => {
+			return dokuwikiMediaToMarkdownLink(args[0].trim(), args[1], mediaIdMap);
+		})
 		.replaceAll("\n\n\n", "\n")
 		.replaceAll("\\\\", "");
 
@@ -287,6 +296,11 @@ const dokuwikiLinkToMarkdownLink = (
 	}
 
 	const id = idMap[dokuwikiLinkTargetToDokuwikiId(dokuwikiLinkTarget)];
+	if (!id) {
+		throw new Error(
+			`id not found. { dokuwikiLinkTarget: ${dokuwikiLinkTarget}, dokuwikiLinkTitle: ${dokuwikiLinkTitle}, key: ${dokuwikiLinkTargetToDokuwikiId(dokuwikiLinkTarget)} }`,
+		);
+	}
 	return markdownLink(
 		dokuwikiLinkTitle || dokuwikiLinkTargetToTitle(dokuwikiLinkTarget),
 		`https://docs.google.com/document/d/${id}`,
@@ -306,12 +320,38 @@ const dokuwikiLinkTargetToTitle = (target: string) => {
  */
 const dokuwikiLinkTargetToDokuwikiId = (title: string) => {
 	return title
-		.replace(":", () => (title.startsWith(":") ? "" : "_"))
-		.replace("･", "_")
-		.replace("(", "_")
-		.replace(")", "")
-		.replace(" ", "_")
+		.split(":")
+		.filter((s) => s.trim())
+		.join("_")
+		.replaceAll("･", "_")
+		.replaceAll("(", "_")
+		.replaceAll(")", "")
+		.replaceAll("（", "_")
+		.replaceAll("）", "_")
+		.replaceAll("【", "_")
+		.replaceAll("】", "_")
+		.replaceAll(/\s+/g, "_")
 		.toLowerCase();
+};
+
+/**
+ * DokuwikiのメディアをMarkdownのリンクに変換。
+ */
+const dokuwikiMediaToMarkdownLink = (
+	dokuwikiMediaTarget: string,
+	dokuwikiMediaTitle: string,
+	idMap: Record<string, string>,
+) => {
+	const id = idMap[dokuwikiLinkTargetToDokuwikiId(dokuwikiMediaTarget)];
+	if (!id) {
+		throw new Error(
+			`meida id not found. { dokuwikiMediaTarget: ${dokuwikiMediaTarget}, dokuwikiMediaTitle: ${dokuwikiMediaTitle}, key: ${dokuwikiLinkTargetToDokuwikiId(dokuwikiMediaTarget)} }`,
+		);
+	}
+	return markdownLink(
+		dokuwikiMediaTitle || dokuwikiLinkTargetToTitle(dokuwikiMediaTarget),
+		`https://drive.google.com/open?id=${id}`,
+	);
 };
 
 const markdownLink = (title: string, link: string) => {
