@@ -181,7 +181,6 @@ const updateHeadings = async (
 			headingStyle,
 			heading.trim(),
 			updatedResult.indexOf(match) + 1,
-			updatedResult.indexOf(match) + match.length + 2,
 		);
 		updatedResult = updatedResult.replace(match, heading.trim());
 		count++;
@@ -238,7 +237,6 @@ const updateUnorderListItems = async (
 			text,
 			indent.replaceAll("  ", "*").length,
 			updatedResult.indexOf(match) + 1,
-			updatedResult.indexOf(match) + match.length + 2,
 		);
 		updatedResult = updatedResult.replace(match, text);
 		count++;
@@ -266,7 +264,6 @@ const updateOrderListItems = async (
 			text,
 			indent.replaceAll("  ", "-").length,
 			updatedResult.indexOf(match) + 1,
-			updatedResult.indexOf(match) + match.length + 2,
 		);
 		updatedResult = updatedResult.replace(match, text);
 		count++;

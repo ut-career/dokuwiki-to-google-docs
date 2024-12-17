@@ -120,8 +120,8 @@ export const updateHeading = async (
 		| "HEADING_6",
 	text: string,
 	startIndex: number,
-	endIndex: number,
 ) => {
+	const endIndex = startIndex + originalText.length;
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -139,11 +139,18 @@ export const updateHeading = async (
 					},
 				},
 				{
-					replaceAllText: {
-						containsText: {
-							text: originalText,
+					createNamedRange: {
+						name: `${startIndex}-${endIndex}`,
+						range: {
+							startIndex,
+							endIndex,
 						},
-						replaceText: text,
+					},
+				},
+				{
+					replaceNamedRangeContent: {
+						namedRangeName: `${startIndex}-${endIndex}`,
+						text,
 					},
 				},
 			],
@@ -181,8 +188,8 @@ export const updateUnorderListItem = async (
 	text: string,
 	indentLevel: number,
 	startIndex: number,
-	endIndex: number,
 ) => {
+	const endIndex = startIndex + originalText.length;
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -218,11 +225,18 @@ export const updateUnorderListItem = async (
 					},
 				},
 				{
-					replaceAllText: {
-						containsText: {
-							text: originalText,
+					createNamedRange: {
+						name: `${startIndex}-${endIndex}`,
+						range: {
+							startIndex,
+							endIndex,
 						},
-						replaceText: text,
+					},
+				},
+				{
+					replaceNamedRangeContent: {
+						namedRangeName: `${startIndex}-${endIndex}`,
+						text,
 					},
 				},
 			],
@@ -237,8 +251,8 @@ export const updateOrderedListItem = async (
 	text: string,
 	indentLevel: number,
 	startIndex: number,
-	endIndex: number,
 ) => {
+	const endIndex = startIndex + originalText.length;
 	await googleDocs.documents.batchUpdate({
 		documentId: docId,
 		requestBody: {
@@ -274,11 +288,18 @@ export const updateOrderedListItem = async (
 					},
 				},
 				{
-					replaceAllText: {
-						containsText: {
-							text: originalText,
+					createNamedRange: {
+						name: `${startIndex}-${endIndex}`,
+						range: {
+							startIndex,
+							endIndex,
 						},
-						replaceText: text,
+					},
+				},
+				{
+					replaceNamedRangeContent: {
+						namedRangeName: `${startIndex}-${endIndex}`,
+						text,
 					},
 				},
 			],
