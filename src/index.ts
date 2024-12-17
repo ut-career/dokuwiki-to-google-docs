@@ -50,6 +50,7 @@ const main = async () => {
 	console.info("Writing DokuWiki pages to Google Docs...");
 	await writeDocs({
 		docIdMapJsonPath: OUTPUT_DOC_ID_MAP_JSON,
+		mediaIdMapJsonPath: OUTPUT_MEDIA_ID_MAP_JSON,
 		dokuwikiPagesDirPath: OUTPUT_DOKUWIKI_DIR,
 	});
 };
