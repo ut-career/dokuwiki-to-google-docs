@@ -10,8 +10,6 @@ import {
 } from "../infra/googleDocs";
 import { readFile } from "../infra/local";
 
-const markdownLinkRegex = /[ ]?\[([^\]]*)\]\((http[^\)]*)\)/g;
-
 export const writeDocs = async ({
 	docIdMapJsonPath,
 	dokuwikiPagesDirPath,
@@ -27,16 +25,21 @@ export const writeDocs = async ({
 	// 	const dokuwikiFilepath = `${dokuwikiPagesDirPath}/${dokuwikiPage}`;
 	// 	await writeGoogleDocsBody(idMap, dokuwikiFilepath, googleDocsId);
 	// }
-	await writeGoogleDocsBody(
-		idMap,
-		`${dokuwikiPagesDirPath}/wiki_menu`,
-		idMap.wiki_menu,
-	);
+	// await writeGoogleDocsBody(
+	// 	idMap,
+	// 	`${dokuwikiPagesDirPath}/wiki_menu`,
+	// 	idMap.wiki_menu,
+	// );
 	// await writeGoogleDocsBody(
 	// 	idMap,
 	// 	`${dokuwikiPagesDirPath}/wiki_remote-desktop`,
 	// 	idMap["wiki_remote-desktop"],
 	// );
+	await writeGoogleDocsBody(
+		idMap,
+		`${dokuwikiPagesDirPath}/wiki_soft`,
+		idMap.wiki_soft,
+	);
 };
 
 const writeGoogleDocsBody = async (
@@ -111,17 +114,20 @@ const writeGoogleDocsBody = async (
 	console.info(r);
 };
 
+const markdownLinkRegex = /[ ]?\[([^\]]*)\]\((http[^\)]*)\)/g;
+const linkRegex = /(?<!\()(http[^\)^\\^\n]*)/g;
+
 const updateLinks = async (
 	googleDocsId: string,
 	googleDocsBody: string,
 ): Promise<string> => {
 	const rl = new readline.promises.Readline(stdout);
-	const links = googleDocsBody.matchAll(markdownLinkRegex);
+	const markdownLinks = googleDocsBody.matchAll(markdownLinkRegex);
 	console.info("\t\tUpdating links...");
 	console.info("\t\tUpdated 0 links");
 	let count = 0;
 	let updatedResult = googleDocsBody;
-	for (const [match, title, link] of links) {
+	for (const [match, title, link] of markdownLinks) {
 		await updateLink(
 			googleDocsId,
 			match,
@@ -136,6 +142,23 @@ const updateLinks = async (
 		await rl.commit();
 		console.info(`\t\tUpdated ${count} links`);
 	}
+
+	const links = googleDocsBody.matchAll(linkRegex);
+	for (const [match, link] of links) {
+		await updateLink(
+			googleDocsId,
+			match,
+			link,
+			` ${link} `,
+			updatedResult.indexOf(match) + 1,
+		);
+		updatedResult = updatedResult.replace(match, ` ${link} `);
+		count++;
+		rl.moveCursor(0, -1);
+		await rl.commit();
+		console.info(`\t\tUpdated ${count} links`);
+	}
+
 	return updatedResult;
 };
 
