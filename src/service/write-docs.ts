@@ -27,27 +27,15 @@ export const writeDocs = async ({
 		string,
 		string
 	>;
-	// for (const [dokuwikiPage, googleDocsId] of Object.entries(idMap)) {
-	// 	const dokuwikiFilepath = `${dokuwikiPagesDirPath}/${dokuwikiPage}`;
-	// 	await writeGoogleDocsBody(idMap, dokuwikiFilepath, googleDocsId);
-	// }
-	await writeGoogleDocsBody(
-		idMap,
-		mediaIdMap,
-		`${dokuwikiPagesDirPath}/wiki_menu`,
-		idMap.wiki_menu,
-	);
-	// await writeGoogleDocsBody(
-	// 	idMap,
-	// 	`${dokuwikiPagesDirPath}/wiki_remote-desktop`,
-	// 	idMap["wiki_remote-desktop"],
-	// );
-	// await writeGoogleDocsBody(
-	// 	idMap,
-	// 	mediaIdMap,
-	// 	`${dokuwikiPagesDirPath}/wiki_soft`,
-	// 	idMap.wiki_soft,
-	// );
+	for (const [dokuwikiPage, googleDocsId] of Object.entries(idMap)) {
+		const dokuwikiFilepath = `${dokuwikiPagesDirPath}/${dokuwikiPage}`;
+		await writeGoogleDocsBody(
+			idMap,
+			mediaIdMap,
+			dokuwikiFilepath,
+			googleDocsId,
+		);
+	}
 };
 
 const writeGoogleDocsBody = async (
@@ -62,8 +50,18 @@ const writeGoogleDocsBody = async (
 		.replaceAll(/\[\[(\[\[)?([^\|\]]*)[\|]?([^\]]*)\]\]/g, (_, ...args) => {
 			return dokuwikiLinkToMarkdownLink(args[1], args[2], idMap);
 		})
-		.replaceAll(/\{\{([^\|\]]*)[\|]?([^\}]*)\}\}/g, (_, ...args) => {
-			return dokuwikiMediaToMarkdownLink(args[0].trim(), args[1], mediaIdMap);
+		.replaceAll(/\{\{([^\|\]\}]*)[\|]?([^\}]*)\}\}/g, (_, ...args) => {
+			return dokuwikiMediaToMarkdownLink(
+				args[0]
+					.trim()
+					// メディアの埋め込みの際に使われる大きさを示すパラメータ。本ソフトウェアではURLに変換する。
+					.split("?")[0],
+				args[1],
+				mediaIdMap,
+			);
+		})
+		.replaceAll(/(?<![\(\[])(http[^\)^\\^\n]*)/g, (_, ...args) => {
+			return markdownLink(args[0], args[0]);
 		})
 		.replaceAll("\n\n\n", "\n")
 		.replaceAll("\\\\", "");
@@ -119,23 +117,22 @@ const writeGoogleDocsBody = async (
 	);
 
 	// 他の変換でリンクが失われないように、Linkのアップデートは最後に行う
-	const r = await updateLinks(googleDocsId, orderListUpdated);
-	console.info(r);
+	await updateLinks(googleDocsId, orderListUpdated);
 };
 
 const markdownLinkRegex = /[ ]?\[([^\]]*)\]\((http[^\)]*)\)/g;
-const linkRegex = /(?<!\()(http[^\)^\\^\n]*)/g;
 
 const updateLinks = async (
 	googleDocsId: string,
 	googleDocsBody: string,
 ): Promise<string> => {
 	const rl = new readline.promises.Readline(stdout);
-	const markdownLinks = googleDocsBody.matchAll(markdownLinkRegex);
 	console.info("\t\tUpdating links...");
 	console.info("\t\tUpdated 0 links");
 	let count = 0;
 	let updatedResult = googleDocsBody;
+
+	const markdownLinks = googleDocsBody.matchAll(markdownLinkRegex);
 	for (const [match, title, link] of markdownLinks) {
 		await updateLink(
 			googleDocsId,
@@ -146,22 +143,6 @@ const updateLinks = async (
 			updatedResult.indexOf(match) + 1,
 		);
 		updatedResult = updatedResult.replace(match, ` ${title || link} `);
-		count++;
-		rl.moveCursor(0, -1);
-		await rl.commit();
-		console.info(`\t\tUpdated ${count} links`);
-	}
-
-	const links = googleDocsBody.matchAll(linkRegex);
-	for (const [match, link] of links) {
-		await updateLink(
-			googleDocsId,
-			match,
-			link,
-			` ${link} `,
-			updatedResult.indexOf(match) + 1,
-		);
-		updatedResult = updatedResult.replace(match, ` ${link} `);
 		count++;
 		rl.moveCursor(0, -1);
 		await rl.commit();
@@ -205,7 +186,7 @@ const updateDividers = async (
 	googleDocsBody: string,
 ): Promise<string> => {
 	const rl = new readline.promises.Readline(stdout);
-	const dividers = googleDocsBody.matchAll(/----\n/g);
+	const dividers = googleDocsBody.matchAll(/---[-]+\n/g);
 	console.info("\t\tUpdating Dividers...");
 	console.info("\t\tUpdated 0 Dividers");
 	let count = 0;
@@ -295,11 +276,12 @@ const dokuwikiLinkToMarkdownLink = (
 		return markdownLink(dokuwikiLinkTitle, dokuwikiLinkTarget);
 	}
 
-	const id = idMap[dokuwikiLinkTargetToDokuwikiId(dokuwikiLinkTarget)];
+	const id = idMap[dokuwikiLinkTargetToDokuwikiId(`${dokuwikiLinkTarget}`)];
 	if (!id) {
-		throw new Error(
+		console.warn(
 			`id not found. { dokuwikiLinkTarget: ${dokuwikiLinkTarget}, dokuwikiLinkTitle: ${dokuwikiLinkTitle}, key: ${dokuwikiLinkTargetToDokuwikiId(dokuwikiLinkTarget)} }`,
 		);
+		return dokuwikiLinkTitle || dokuwikiLinkTargetToTitle(dokuwikiLinkTarget);
 	}
 	return markdownLink(
 		dokuwikiLinkTitle || dokuwikiLinkTargetToTitle(dokuwikiLinkTarget),
@@ -317,6 +299,8 @@ const dokuwikiLinkTargetToTitle = (target: string) => {
 
 /**
  * dokuwikiのリンクターゲットをdokuwikiのページIDに変換
+ *
+ * _への変換が発生する文字の種別はdokuwikiのコードを読めば分かりそう、、、
  */
 const dokuwikiLinkTargetToDokuwikiId = (title: string) => {
 	return title
@@ -324,13 +308,28 @@ const dokuwikiLinkTargetToDokuwikiId = (title: string) => {
 		.filter((s) => s.trim())
 		.join("_")
 		.replaceAll("･", "_")
+		.replaceAll("●", "_")
+		.replaceAll("■", "_")
+		.replaceAll("！", "_")
+		.replaceAll("★", "_")
+		.replaceAll("＠", "_")
+		.replaceAll("／", "_")
+		.replaceAll("：", "_")
+		.replaceAll("～", "_")
 		.replaceAll("(", "_")
-		.replaceAll(")", "")
+		.replaceAll(")", "_")
 		.replaceAll("（", "_")
 		.replaceAll("）", "_")
+		.replaceAll("「", "_")
+		.replaceAll("」", "_")
+		.replaceAll("＜", "_")
+		.replaceAll("＞", "_")
 		.replaceAll("【", "_")
 		.replaceAll("】", "_")
 		.replaceAll(/\s+/g, "_")
+		.replaceAll(/\_[\_]+/g, "_")
+		.replace(/_$/g, "")
+		.replace(/^_/g, "")
 		.toLowerCase();
 };
 
@@ -345,7 +344,7 @@ const dokuwikiMediaToMarkdownLink = (
 	const id = idMap[dokuwikiLinkTargetToDokuwikiId(dokuwikiMediaTarget)];
 	if (!id) {
 		throw new Error(
-			`meida id not found. { dokuwikiMediaTarget: ${dokuwikiMediaTarget}, dokuwikiMediaTitle: ${dokuwikiMediaTitle}, key: ${dokuwikiLinkTargetToDokuwikiId(dokuwikiMediaTarget)} }`,
+			`media id not found. { dokuwikiMediaTarget: ${dokuwikiMediaTarget}, dokuwikiMediaTitle: ${dokuwikiMediaTitle}, key: ${dokuwikiLinkTargetToDokuwikiId(dokuwikiMediaTarget)} }`,
 		);
 	}
 	return markdownLink(
